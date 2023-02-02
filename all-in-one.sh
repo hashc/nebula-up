@@ -285,7 +285,7 @@ function waiting_for_nebula_graph_up {
 	local max_attempts=${MAX_ATTEMPTS-6}
 	local timer=${INIT_TIMER-4}
 	local attempt=1
-    cd $WOKRING_PATH/nebula-docker-compose
+    cd $WORKING_PATH/nebula-docker-compose
 	while [[ $attempt < $max_attempts ]]
 	do
 		healthy_containers_count_str=$(docker-compose ps --filter health=healthy | grep 'Up ('|wc -l|sed -e 's/^[[:space:]]*//')
@@ -315,13 +315,13 @@ function install_nebula_graph {
 	# TBD, considerring create gitee mirror for git repo? if is_CN_NETWORK is true.
 	# https://github.com/vesoft-inc/nebula-docker-compose
 	docker network create nebula-net > /dev/null 2>&1 || true
-	cd $WOKRING_PATH
-	if [ ! -d "$WOKRING_PATH/nebula-docker-compose" ]; then
+	cd $WORKING_PATH
+	if [ ! -d "$WORKING_PATH/nebula-docker-compose" ]; then
 		git clone --branch $NEBULA_VERSION https://github.com/vesoft-inc/nebula-docker-compose.git
 		grep "external" nebula-docker-compose/docker-compose.yaml > /dev/null 2>&1 || \
 			echo "    external: true" >> nebula-docker-compose/docker-compose.yaml
 	else
-		logger_warn "$WOKRING_PATH/nebula-docker-compose already exists, existing repo will be reused"
+		logger_warn "$WORKING_PATH/nebula-docker-compose already exists, existing repo will be reused"
 		fi
 	cd nebula-docker-compose && git checkout $NEBULA_VERSION 1>/dev/null 2>/dev/null
 	# if $PLATFORM equals to aarch64-darwin , we need to remove the port mappings in docker-compose.yaml
@@ -337,9 +337,9 @@ function install_nebula_graph {
 
 
 function install_nebula_graph_studio {
-	cd $WOKRING_PATH
-	if [ -d "$WOKRING_PATH/nebula-graph-studio-$STUDIO_VERSION" ]; then
-		rm -fr $WOKRING_PATH/nebula-graph-studio-$STUDIO_VERSION
+	cd $WORKING_PATH
+	if [ -d "$WORKING_PATH/nebula-graph-studio-$STUDIO_VERSION" ]; then
+		rm -fr $WORKING_PATH/nebula-graph-studio-$STUDIO_VERSION
 	fi
 	wget https://oss-cdn.nebula-graph.com.cn/nebula-graph-studio/${STUDIO_VERSION}/nebula-graph-studio-$STUDIO_VERSION.tar.gz 1>/dev/null 2>/dev/null
 	mkdir nebula-graph-studio-$STUDIO_VERSION && tar -zxvf nebula-graph-studio-$STUDIO_VERSION.tar.gz -C nebula-graph-studio-$STUDIO_VERSION 1>/dev/null 2>/dev/null
@@ -363,7 +363,7 @@ function install_nebula_graph_console {
 	logger_info "Pulling nebula-console docker image"
 	docker pull vesoft/nebula-console:${CONSOLE_VERSION} 1>/dev/null 2>/dev/null
 
-	sudo bash -c "cat > $WOKRING_PATH/console.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/console.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -373,12 +373,12 @@ function install_nebula_graph_console {
 # Usage: console.sh or console.sh -e "SHOW HOSTS"
 
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
-docker run --rm -ti --network nebula-net --volume $WOKRING_PATH:/root vesoft/nebula-console:${CONSOLE_VERSION} -addr graphd -port 9669 -u root -p nebula "\$@"
+docker run --rm -ti --network nebula-net --volume $WORKING_PATH:/root vesoft/nebula-console:${CONSOLE_VERSION} -addr graphd -port 9669 -u root -p nebula "\$@"
 EOF
-	sudo chmod +x $WOKRING_PATH/console.sh
+	sudo chmod +x $WORKING_PATH/console.sh
 	logger_info "Created console.sh 😁"
 
-	sudo bash -c "cat > $WOKRING_PATH/load-basketballplayer-dataset.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/load-basketballplayer-dataset.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -390,7 +390,7 @@ EOF
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker run --rm -ti --network nebula-net vesoft/nebula-console:${CONSOLE_VERSION} -addr graphd -port 9669 -u root -p nebula -e ":play basketballplayer"
 EOF
-	sudo chmod +x $WOKRING_PATH/load-basketballplayer-dataset.sh
+	sudo chmod +x $WORKING_PATH/load-basketballplayer-dataset.sh
 	logger_info "Created load-basketballplayer-dataset.sh 😁"
 
 }
@@ -398,7 +398,7 @@ EOF
 # Create Uninstall Script
 
 function create_uninstall_script {
-	sudo bash -c "WOKRING_PATH=$WOKRING_PATH;cat > $WOKRING_PATH/uninstall.sh" << EOF
+	sudo bash -c "WORKING_PATH=$WORKING_PATH;cat > $WORKING_PATH/uninstall.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -407,26 +407,26 @@ function create_uninstall_script {
 
 # Usage: uninstall.sh
 
-echo " ℹ️   Cleaning Up Files under $WOKRING_PATH..."
-cd $WOKRING_PATH/nebula-graph-studio-$STUDIO_VERSION 2>/dev/null
+echo " ℹ️   Cleaning Up Files under $WORKING_PATH..."
+cd $WORKING_PATH/nebula-graph-studio-$STUDIO_VERSION 2>/dev/null
 docker-compose down 2>/dev/null
-cd $WOKRING_PATH/nebula-up/dashboard 2>/dev/null
+cd $WORKING_PATH/nebula-up/dashboard 2>/dev/null
 docker-compose down 2>/dev/null
-cd $WOKRING_PATH/nebula-up/spark 2>/dev/null
+cd $WORKING_PATH/nebula-up/spark 2>/dev/null
 docker-compose down 2>/dev/null
-cd $WOKRING_PATH/nebula-up/backup_restore 2>/dev/null
+cd $WORKING_PATH/nebula-up/backup_restore 2>/dev/null
 docker-compose down 2>/dev/null
 sudo docker volume rm backup_restore_data1-1 backup_restore_data1-2 backup_restore_data2-1 backup_restore_data2-2 2>/dev/null
 sudo docker volume rm spark_hadoop_datanode spark_hadoop_historyserver spark_hadoop_namenode 2>/dev/null
-cd $WOKRING_PATH/nebula-docker-compose 2>/dev/null
+cd $WORKING_PATH/nebula-docker-compose 2>/dev/null
 docker-compose down 2>/dev/null
 
-sudo rm -fr $WOKRING_PATH/nebula-graph-studio-$STUDIO_VERSION $WOKRING_PATH/nebula-docker-compose $WOKRING_PATH/nebula-up 2>/dev/null
+sudo rm -fr $WORKING_PATH/nebula-graph-studio-$STUDIO_VERSION $WORKING_PATH/nebula-docker-compose $WORKING_PATH/nebula-up 2>/dev/null
 echo "┌────────────────────────────────────────┐"
 echo "│ 🌌 Nebula-Up Uninstallation Finished   │"
 echo "└────────────────────────────────────────┘"
 EOF
-	sudo chmod +x $WOKRING_PATH/uninstall.sh
+	sudo chmod +x $WORKING_PATH/uninstall.sh
 }
 
 function install_binfmt_on_linux_arm64 {
@@ -445,11 +445,11 @@ function install_nebula_graph_dashboard {
 	fi
 	# if DASHBOARD is true, then continue to install.
 	logger_info "Installing nebula-graph-dashboard..."
-	cd $WOKRING_PATH
-	if [ ! -d "$WOKRING_PATH/nebula-up" ]; then
+	cd $WORKING_PATH
+	if [ ! -d "$WORKING_PATH/nebula-up" ]; then
 		git clone https://github.com/wey-gu/nebula-up.git
 	else
-		logger_warn "$WOKRING_PATH/nebula-up already exists, existing repo will be reused"
+		logger_warn "$WORKING_PATH/nebula-up already exists, existing repo will be reused"
 	fi
 	cd nebula-up && git stash 1>/dev/null 2>/dev/null && git pull 1>/dev/null 2>/dev/null
 	cd dashboard
@@ -466,11 +466,11 @@ function install_nebula_graph_spark {
 	fi
 	# if SPARK is true, then continue to install.
 	logger_info "Installing Nebula Spark env: Spark Connector, Exchange, Algorithm..."
-	cd $WOKRING_PATH
-	if [ ! -d "$WOKRING_PATH/nebula-up" ]; then
+	cd $WORKING_PATH
+	if [ ! -d "$WORKING_PATH/nebula-up" ]; then
 		git clone https://github.com/wey-gu/nebula-up.git
 	else
-		logger_warn "$WOKRING_PATH/nebula-up already exists, existing repo will be reused"
+		logger_warn "$WORKING_PATH/nebula-up already exists, existing repo will be reused"
 	fi
 	cd nebula-up && git stash 1>/dev/null 2>/dev/null && git pull 1>/dev/null 2>/dev/null
 	cd spark
@@ -485,7 +485,7 @@ function install_nebula_graph_spark {
 		gzip -d download/soc-LiveJournal1.txt.gz
 		sed -i '1,4d' download/soc-LiveJournal1.txt
 	fi
-	sudo bash -c "cat > $WOKRING_PATH/nebula-pyspark.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-pyspark.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -497,10 +497,10 @@ function install_nebula_graph_spark {
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker exec -it sparkmaster /spark/bin/pyspark --driver-class-path /root/download/nebula-spark-connector.jar --jars /root/download/nebula-spark-connector.jar
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-pyspark.sh
+	sudo chmod +x $WORKING_PATH/nebula-pyspark.sh
 	logger_info "Created nebula-pyspark.sh 😁"
 
-	sudo bash -c "cat > $WOKRING_PATH/nebula-exchange-example.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-exchange-example.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -512,10 +512,10 @@ EOF
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker exec -it sparkmaster /spark/bin/spark-submit --master local --class com.vesoft.nebula.exchange.Exchange /root/download/nebula-exchange.jar -c /root/exchange.conf
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-exchange-example.sh
+	sudo chmod +x $WORKING_PATH/nebula-exchange-example.sh
 	logger_info "Created nebula-exchange-example.sh 😁"
 
-	sudo bash -c "cat > $WOKRING_PATH/load-LiveJournal-dataset.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/load-LiveJournal-dataset.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -527,16 +527,16 @@ EOF
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker run --rm -ti \\
     --network=nebula-net \\
-    -v $WOKRING_PATH/nebula-up/importer/LiveJournal.yaml:/root/importer.yaml \\
-    -v $WOKRING_PATH/nebula-up/spark/download:/root \\
+    -v $WORKING_PATH/nebula-up/importer/LiveJournal.yaml:/root/importer.yaml \\
+    -v $WORKING_PATH/nebula-up/spark/download:/root \\
     vesoft/nebula-importer:v3.2.0 \\
     --config /root/importer.yaml
 
 EOF
-	sudo chmod +x $WOKRING_PATH/load-LiveJournal-dataset.sh
+	sudo chmod +x $WORKING_PATH/load-LiveJournal-dataset.sh
 	logger_info "Created load-LiveJournal-dataset.sh 😁"
 
-	sudo bash -c "cat > $WOKRING_PATH/nebula-algo-pagerank-example.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-algo-pagerank-example.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -551,7 +551,7 @@ sudo docker exec -it sparkmaster /spark/bin/spark-submit --master "local" --conf
     --driver-memory 4g /root/download/nebula-algo.jar \\
     -p /root/pagerank.conf
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-algo-pagerank-example.sh
+	sudo chmod +x $WORKING_PATH/nebula-algo-pagerank-example.sh
 	logger_info "Created nebula-algo-pagerank-example.sh 😁"
 }
 
@@ -563,11 +563,11 @@ function install_nebula_graph_br {
 	fi
 	# if BR is true, then continue to install.
 	logger_info "Installing Nebula BR env: MINIO, Nebula Agents, BR"
-	cd $WOKRING_PATH
-	if [ ! -d "$WOKRING_PATH/nebula-up" ]; then
+	cd $WORKING_PATH
+	if [ ! -d "$WORKING_PATH/nebula-up" ]; then
 		git clone https://github.com/wey-gu/nebula-up.git
 	else
-		logger_warn "$WOKRING_PATH/nebula-up already exists, existing repo will be reused"
+		logger_warn "$WORKING_PATH/nebula-up already exists, existing repo will be reused"
 	fi
 	cd nebula-up && git stash 1>/dev/null 2>/dev/null && git pull 1>/dev/null 2>/dev/null
 	cd backup_restore
@@ -576,7 +576,7 @@ function install_nebula_graph_br {
 	docker-compose pull || logger_error "Failed to pull docker images for backup_restore env"
 	docker-compose up -d
 
-	sudo bash -c "cat > $WOKRING_PATH/nebula-br.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-br.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -588,11 +588,11 @@ function install_nebula_graph_br {
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker exec -it backup_restore_graphd1-agent_1 br "\$@"
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-br.sh
+	sudo chmod +x $WORKING_PATH/nebula-br.sh
 	logger_info "Created nebula-br.sh 😁"
 
 
-	sudo bash -c "cat > $WOKRING_PATH/nebula-br-backup-full.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-br-backup-full.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -604,11 +604,11 @@ EOF
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker exec -it backup_restore_graphd1-agent_1 br backup full --meta "metad0:9559" --s3.endpoint "http://nginx:9000" --storage="s3://nebula-br-bucket/" --s3.access_key=minioadmin --s3.secret_key=minioadmin --s3.region=default
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-br-backup-full.sh
+	sudo chmod +x $WORKING_PATH/nebula-br-backup-full.sh
 	logger_info "Created nebula-br-backup-full.sh 😁"
 
 
-	sudo bash -c "cat > $WOKRING_PATH/nebula-br-show.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-br-show.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -620,10 +620,10 @@ EOF
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker exec -it backup_restore_graphd1-agent_1 br show --s3.endpoint "http://nginx:9000" --storage="s3://nebula-br-bucket/" --s3.access_key=minioadmin --s3.secret_key=minioadmin --s3.region=default
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-br-show.sh
+	sudo chmod +x $WORKING_PATH/nebula-br-show.sh
 	logger_info "Created nebula-br-show.sh 😁"
 
-	sudo bash -c "cat > $WOKRING_PATH/nebula-br-restore-full.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-br-restore-full.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -635,13 +635,13 @@ EOF
 export DOCKER_DEFAULT_PLATFORM=linux/amd64;
 sudo docker exec -it backup_restore_graphd1-agent_1 br restore full --meta "metad0:9559" --s3.endpoint "http://nginx:9000" --storage="s3://nebula-br-bucket/" --s3.access_key=minioadmin --s3.secret_key=minioadmin --s3.region=default --name "\$@"
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-br-restore-full.sh
+	sudo chmod +x $WORKING_PATH/nebula-br-restore-full.sh
 	logger_info "Created nebula-br-restore-full.sh 😁"
 
 }
 
 function create_service_lifecycle_scripts {
-	sudo bash -c "cat > $WOKRING_PATH/nebula-start.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-start.sh" << EOF
 #!/usr/bin/env bash
 # Copyright (c) 2023 vesoft inc. All rights reserved.
 #
@@ -651,46 +651,46 @@ function create_service_lifecycle_scripts {
 # Usage: nebula-start.sh
 
 echo trying to start nebulagraph if installed...
-cd $WOKRING_PATH/nebula-docker-compose && docker-compose up -d
+cd $WORKING_PATH/nebula-docker-compose && docker-compose up -d
 
 echo trying to start spark if installed...
-cd $WOKRING_PATH/spark 2>/dev/null && docker-compose up -d
+cd $WORKING_PATH/nebula-up/spark 2>/dev/null && docker-compose up -d
 
 echo trying to start nebula-graph-studio if installed...
-cd $WOKRING_PATH/nebula-graph-studio-$STUDIO_VERSION 2>/dev/null && docker-compose up -d
+cd $WORKING_PATH/nebula-graph-studio-$STUDIO_VERSION 2>/dev/null && docker-compose up -d
 
 echo trying to start dashboard if installed...
-cd $WOKRING_PATH/dashboard 2>/dev/null && docker-compose up -d
+cd $WORKING_PATH/nebula-up/dashboard 2>/dev/null && docker-compose up -d
 
 echo trying to start backup_restore if installed...
-cd $WOKRING_PATH/backup_restore 2>/dev/null && docker-compose up -d
+cd $WORKING_PATH/nebula-up/backup_restore 2>/dev/null && docker-compose up -d
 
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-start.sh
+	sudo chmod +x $WORKING_PATH/nebula-start.sh
 	logger_info "Created nebula-start.sh 😁"
 
-	sudo bash -c "cat > $WOKRING_PATH/nebula-stop.sh" << EOF
+	sudo bash -c "cat > $WORKING_PATH/nebula-stop.sh" << EOF
 #!/usr/bin/env bash
 
 # Usage: nebula-stop.sh
 
 echo trying to stop nebulagraph if installed...
-cd $WOKRING_PATH/nebula-docker-compose && docker-compose down
+cd $WORKING_PATH/nebula-docker-compose && docker-compose down
 
 echo trying to stop spark if installed...
-cd $WOKRING_PATH/spark 2>/dev/null && docker-compose down
+cd $WORKING_PATH/nebula-up/spark 2>/dev/null && docker-compose down
 
 echo trying to stop nebula-graph-studio if installed...
-cd $WOKRING_PATH/nebula-graph-studio-$STUDIO_VERSION 2>/dev/null && docker-compose down
+cd $WORKING_PATH/nebula-graph-studio-$STUDIO_VERSION 2>/dev/null && docker-compose down
 
 echo trying to stop dashboard if installed...
-cd $WOKRING_PATH/dashboard 2>/dev/null && docker-compose down
+cd $WORKING_PATH/nebula-up/dashboard 2>/dev/null && docker-compose down
 
 echo trying to stop backup_restore if installed...
-cd $WOKRING_PATH/backup_restore 2>/dev/null && docker-compose down
+cd $WORKING_PATH/nebula-up/backup_restore 2>/dev/null && docker-compose down
 
 EOF
-	sudo chmod +x $WOKRING_PATH/nebula-stop.sh
+	sudo chmod +x $WORKING_PATH/nebula-stop.sh
 	logger_info "Created nebula-stop.sh 😁"
 
 }
@@ -813,8 +813,8 @@ function main {
 	esac
 
 	CURRENT_PATH="$pwd"
-	WOKRING_PATH="$HOME/.nebula-up"
-	mkdir -p $WOKRING_PATH && cd $WOKRING_PATH
+	WORKING_PATH="$HOME/.nebula-up"
+	mkdir -p $WORKING_PATH && cd $WORKING_PATH
 	PLATFORM=$(get_platform)
 	CN_NETWORK=false
 	if is_CN_NETWORK; then
